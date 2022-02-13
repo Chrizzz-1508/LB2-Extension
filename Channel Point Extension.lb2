@@ -1,0 +1,186 @@
+[extension_name]
+Channel Point Extension
+[extension_info]
+[insert_external]
+<div><p>Created by Chrizzz_1508<p>Based on Liorans Channel Point extension which was modded by Silverlink and WaldoAndFriends</div></p>
+[insert_command]
+LB.extCommand('Twitch: Create Reward', 3355443, 52, {
+	'Auth_Token': ['Auth Token',15,''],
+	'User_ID': ['User ID',15,''],
+	'Name': ['Name',14,''],
+	'Description': ['Description',14,''],
+	'Cost': ['Cost',15,''],
+	'Color': ['Color',14,'#FFFFFF'],
+	'Enabled': ['Enabled',18,0,null,['Yes','No']],
+	'RewardIDVariable': ['Save to Variable',14,'rew_id']
+	})
+LB.extCommand('Twitch: Edit Reward 2', 3355443, 52, {
+	'Auth_Token': ['Auth Token',15,''],
+	'User_ID': ['User ID',15,''],
+	'Reward_ID': ['Reward ID',15,''],
+	'Skip_Queue': ['Skip Queue?',18,0,null,['Yes','No']],
+	'Input_Text': ['Text Input?',18,0,null,['Yes','No']],
+	'Cooldown': ['Cooldown',15,''],
+	'MaxRedeems': ['MaxRedeems',15,''],
+	'MaxPerUser': ['MaxPerUser',15,''],
+	'Color': ['Color',14,'#FFFFFF'],
+	})
+LB.extCommand('Twitch: Delete Reward', 3355443, 52, {
+	'Auth_Token': ['Auth Token',15,''],
+	'User_ID': ['User ID',15,''],
+	'Reward_ID': ['Reward ID',15,'']
+	})
+[insert_hook]
+case "Twitch: Create Reward":{
+	TwitchCreateReward(LioranBoardJSON.Auth_Token,LioranBoardJSON.User_ID,LioranBoardJSON.Name,LioranBoardJSON.Description,LioranBoardJSON.Cost,LioranBoardJSON.Color,LioranBoardJSON.Enabled,LioranBoardJSON.RewardIDVariable)
+}break
+case "Twitch: Edit Reward 2":{
+	TwitchUpdateReward(LioranBoardJSON.Auth_Token,LioranBoardJSON.User_ID,LioranBoardJSON.Reward_ID,LioranBoardJSON.Skip_Queue,LioranBoardJSON.Input_Text,LioranBoardJSON.Cooldown,LioranBoardJSON.MaxRedeems,LioranBoardJSON.MaxPerUser,LioranBoardJSON.Color)
+}break
+case "Twitch: Delete Reward":{
+	TwitchDeleteReward(LioranBoardJSON.Auth_Token,LioranBoardJSON.User_ID,LioranBoardJSON.Reward_ID)
+}break
+[insert_script]
+
+function TwitchCreateReward(Auth_Token,User_ID,title,description,cost,color,enabled,RewardIDVariable){
+	
+	var reward={};
+	function LBCreateRewardListener () {
+	    var RewardJSON = JSON.parse(this.responseText);
+		LB.setVariable(RewardIDVariable, RewardJSON.data[0].id, buttonId = 'global');
+
+	}
+	reward.title=title;
+	reward.cost=cost
+	
+	if (description!==""){
+		reward.prompt=description;
+	}
+	if (color!==""){
+		//var colorstring='#' + color.toString(16).toUpperCase()
+		reward.background_color=color;
+	}
+	if (enabled!==""){
+		if (enabled==0){
+			reward.is_enabled=true;
+		}else{
+			reward.is_enabled=false;
+		}
+	}
+	//send request to twitch
+	reward=JSON.stringify(reward)
+	var LBCreateRewardCheck = new XMLHttpRequest();
+	LBCreateRewardCheck.addEventListener("load", LBCreateRewardListener);
+	LBCreateRewardCheck.open("POST", "https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id="+User_ID);
+	LBCreateRewardCheck.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
+	LBCreateRewardCheck.setRequestHeader("Content-Type", "application/json");
+	LBCreateRewardCheck.setRequestHeader("Authorization", "Bearer "+Auth_Token);
+	LBCreateRewardCheck.setRequestHeader("client-id", TWITCH_CLIENT_ID);
+	LBCreateRewardCheck.send(reward);
+	return 1;
+}
+
+function TwitchUpdateReward(Auth_Token,User_ID,Reward_ID,Skip_Queue,Input_Text,Cooldown,MaxRedeems,MaxPerUser,color){
+
+	var reward={};
+	if (Skip_Queue!==""){
+		if (Skip_Queue==0){
+			reward.should_redemptions_skip_request_queue=true;
+		}else{
+			reward.should_redemptions_skip_request_queue=false;
+		}
+	}
+	
+	if (Input_Text!==""){
+		if (Input_Text==0){
+			reward.is_user_input_required=true;
+		}else{
+			reward.is_user_input_required=false;
+		}
+	}
+	
+	if (Cooldown > 0) {
+		reward.global_cooldown_seconds = Cooldown;
+		reward.is_global_cooldown_enabled = true;
+	}
+	else if (Cooldown !==""){
+		reward.global_cooldown_seconds = 0;
+		reward.is_global_cooldown_enabled = false;
+	}
+	
+	if (color!==""){
+		reward.background_color=color
+	}
+	
+	if (MaxRedeems > 0) {
+		reward.max_per_stream  = MaxRedeems;
+		reward.is_max_per_stream_enabled = true;
+	}
+	else if (MaxRedeems !==""){
+		reward.max_per_stream = 0;
+		reward.is_max_per_stream_enabled = false;
+	}
+	
+	if (MaxPerUser > 0) {
+		reward.max_per_user_per_stream = MaxPerUser;
+		reward.is_max_per_user_per_stream_enabled = true;
+	}
+	else if (MaxRedeems !==""){
+		reward.max_per_user_per_stream = 0;
+		reward.is_max_per_user_per_stream_enabled = false;
+	}
+	
+	//send request to twitch
+	reward=JSON.stringify(reward)
+	var LBEditRewardCheck = new XMLHttpRequest();
+	LBEditRewardCheck.open("PATCH", "https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id="+User_ID+"&id="+Reward_ID);
+	LBEditRewardCheck.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
+	LBEditRewardCheck.setRequestHeader("Content-Type", "application/json");
+	LBEditRewardCheck.setRequestHeader("Authorization", "Bearer "+Auth_Token);
+	LBEditRewardCheck.setRequestHeader("client-id", TWITCH_CLIENT_ID);
+	LBEditRewardCheck.send(reward);
+	return 1;
+}
+
+async function TwitchDeleteReward(oauthToken, channel_id, rewardID) {
+	let customRewardURL = `https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id=${channel_id}&id=${rewardID}`
+
+	let requestOptions = {
+    method : "DELETE",
+    headers : {
+      "Authorization": `Bearer ${oauthToken}`,
+      "Client-Id": TWITCH_CLIENT_ID,
+			"Content-Type" : "application/json"
+    }
+  }
+
+	let response = await fetch(customRewardURL, requestOptions)
+	switch (response.status) {
+		case 204: {
+			LB.alert('Successfully Deleted Channel Point Reward');
+			break
+		}
+		case 400: {
+			LB.alert('Bad Request: reward id not specified');
+			break
+		}
+		case 401: {
+			LB.alert('Unauthenticated: Missing/invalid Token');
+			break
+		}
+		case 403: {
+			LB.alert('Forbidden: The Custom Reward was created by a different channel_id or Channel Points are not available for the broadcaster');
+			break
+		}
+		case 404: {
+			LB.alert('Not Found: The Custom Reward doesn’t exist with the id and channel_id specified');
+			break
+		}
+		case 500: {
+			LB.alert('Internal Server Error: Something bad happened on Twitch their side');
+			break
+		}
+	}
+}
+[insert_over]
+{ "deck_data": "{ \"background_color\": 4210752.0, \"on\": 1.0, \"grid_y\": 3.0, \"snap_grid\": true, \"lb_version\": \"2.06.1\", \"background_image\": \"\", \"encrypted\": 0.0, \"adaptive_resizing\": true, \"unique_id\": \"20220207224801563005577\", \"button_list\": [ { \"color\": 1294375.0, \"persistent\": 0.0, \"text\": \"Create Reward\", \"release_duration\": 0.0, \"queueable\": 0.0, \"command_list\": [ { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 0.0, \"vis\": 0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get User ID of Main Account\", \"v0\": 2.0 }, { \"b1\": \"user_id\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 1.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 0.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 2.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"user_id\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 3.0, \"vis\": 0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get Auth Token of Main Account\", \"v0\": 2.0 }, { \"b1\": \"auth_token\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 4.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 1.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 5.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"auth_token\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 6.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 68.0, \"b0\": \"Create Channel Point Reward and save reward id to global variable.\\nColorcode needs to be #Hexcode\\nReward ID is saved to global.rew_id by default\\nAlso save the variable to Reward_IDs.ini in the LB2 folder\", \"v0\": 5.0 }, { \"b53\": \"\", \"b5\": \"\", \"b13\": \"==\", \"v14\": 0.0, \"b36\": \"\", \"b38\": \"\", \"v10\": 0.0, \"b32\": \"\", \"b19\": \"==\", \"b57\": \"\", \"b59\": \"\", \"b17\": \"\", \"b1\": \"!=\", \"v18\": 0.0, \"v16\": 0.0, \"b34\": \"==\", \"b7\": \"==\", \"b11\": \"\", \"b9\": \"\", \"b51\": \"\", \"b15\": \"\", \"b3\": \"\", \"b55\": \"==\", \"v12\": 0.0, \"cmd\": 7.0, \"b30\": \"\", \"b43\": \"==\", \"v21\": 0.0, \"v1\": 0.0, \"b26\": \"\", \"b28\": \"==\", \"obsid\": \"Main\", \"b22\": \"==\", \"pos\": 7.0, \"v5\": 0.0, \"b47\": \"\", \"b49\": \"==\", \"v3\": 0.0, \"vis\": 1.0, \"b24\": \"\", \"ms\": 0.0, \"b41\": \"\", \"sel\": 0.0, \"b45\": \"\", \"v9\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b20\": \"\", \"v7\": 0.0, \"b33\": \"\", \"v11\": 0.0, \"b16\": \"==\", \"b0\": \"global.rew_id\", \"b58\": \"==\", \"b56\": \"\", \"b18\": \"\", \"b4\": \"==\", \"b12\": \"\", \"b52\": \"==\", \"b39\": \"\", \"b37\": \"==\", \"v15\": 0.0, \"b54\": \"\", \"b14\": \"\", \"b2\": \"\", \"b31\": \"==\", \"v13\": 0.0, \"b35\": \"\", \"v17\": 0.0, \"v19\": 0.0, \"b50\": \"\", \"b8\": \"\", \"b6\": \"\", \"b10\": \"==\", \"b23\": \"\", \"v4\": 0.0, \"b48\": \"\", \"b46\": \"==\", \"v20\": 0.0, \"b42\": \"\", \"b29\": \"\", \"v0\": 1.0, \"b27\": \"\", \"b44\": \"\", \"b21\": \"\", \"v6\": 0.0, \"v8\": 0.0, \"v2\": 1.0, \"b25\": \"==\", \"b40\": \"==\", \"v22\": 0.0 }, { \"cmd\": 78.0, \"obsid\": \"Main\", \"pos\": 8.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"global.rew_id\" }, { \"Description\": \"Small Test Reward\", \"Color\": \"#FFFFFF\", \"Cost\": \"50\", \"cmd\": 0.0, \"obsid\": \"Main\", \"pos\": 9.0, \"Auth_Token\": \"auth_token\", \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"RewardIDVariable\": \"rew_id\", \"User_ID\": \"user_id\", \"extcmd\": \"Twitch: Create Reward\", \"Name\": \"Testreward\", \"Enabled\": 0.0, \"ext\": \"Transmitter\" }, { \"b1\": \"10000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 10.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"global.rew_id\" }, { \"b1\": \"Reward IDs\", \"b3\": \"\\\/$global.rew_id$\\\/\", \"cmd\": 126.0, \"obsid\": \"Main\", \"pos\": 11.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Reward_IDs\", \"b2\": \"Testreward\" } ], \"press_type\": 0.0, \"x\": 0.0, \"border\": 2.0, \"image\": \"\", \"triggers\": [ ], \"group_id\": \"\", \"overlappable\": 0.0, \"init_variable\": \"\", \"deck\": 1.0, \"width\": 0.5, \"button_id\": \"REW_CREATE\", \"button_duration\": 0.0, \"y\": 0.0, \"switch_deck\": \"\", \"height\": 0.33333333333333331482961625624739, \"release_list\": [ ], \"functions\": 1.0, \"stretch\": 0.0 }, { \"color\": 12609072.0, \"persistent\": 0.0, \"text\": \"Update Settings\\nEnable Stuff\", \"release_duration\": 0.0, \"queueable\": 0.0, \"command_list\": [ { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 0.0, \"vis\": 0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get User ID of Main Account\", \"v0\": 2.0 }, { \"b1\": \"user_id\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 1.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 0.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 2.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"user_id\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 3.0, \"vis\": 0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get Auth Token of Main Account\", \"v0\": 2.0 }, { \"b1\": \"auth_token\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 4.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 1.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 5.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"auth_token\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 6.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 32.0, \"b0\": \"Update Reward\\nAll Settings can be left empty if you don't wanna use them\", \"v0\": 1.0 }, { \"Color\": \"#000000\", \"MaxRedeems\": \"10\", \"cmd\": 0.0, \"obsid\": \"Main\", \"pos\": 7.0, \"Skip_Queue\": 0.0, \"Auth_Token\": \"auth_token\", \"vis\": 1.0, \"ms\": 0.0, \"Cooldown\": \"60\", \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"Reward_ID\": \"global.rew_id\", \"User_ID\": \"user_id\", \"extcmd\": \"Twitch: Edit Reward 2\", \"MaxPerUser\": \"2\", \"Input_Text\": 0.0, \"ext\": \"Transmitter\" } ], \"press_type\": 0.0, \"x\": 0.0, \"border\": 2.0, \"image\": \"\", \"triggers\": [ ], \"group_id\": \"\", \"overlappable\": 0.0, \"init_variable\": \"\", \"deck\": 1.0, \"width\": 0.5, \"button_id\": \"ID6\", \"button_duration\": 0.0, \"y\": 0.33333333333333331482961625624739, \"switch_deck\": \"\", \"height\": 0.33333333333333331482961625624739, \"release_list\": [ ], \"functions\": 1.0, \"stretch\": 0.0 }, { \"color\": 526528.0, \"persistent\": 0.0, \"text\": \"Delete Reward\", \"release_duration\": 0.0, \"queueable\": 0.0, \"command_list\": [ { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 0.0, \"vis\": 0.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get User ID of Main Account\", \"v0\": 2.0 }, { \"b1\": \"user_id\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 1.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 0.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 2.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"user_id\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 3.0, \"vis\": 0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get Auth Token of Main Account\", \"v0\": 2.0 }, { \"b1\": \"auth_token\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 4.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 1.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 5.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"auth_token\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 6.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Delete Reward\", \"v0\": 2.0 }, { \"cmd\": 0.0, \"obsid\": \"Main\", \"pos\": 7.0, \"Auth_Token\": \"auth_token\", \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"Reward_ID\": \"global.rew_id\", \"User_ID\": \"user_id\", \"extcmd\": \"Twitch: Delete Reward\", \"ext\": \"Transmitter\" }, { \"b1\": \"Reward IDs\", \"cmd\": 129.0, \"obsid\": \"Main\", \"pos\": 8.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Reward_IDs\", \"b2\": \"Testreward\" } ], \"press_type\": 0.0, \"x\": 0.0, \"border\": 2.0, \"image\": \"\", \"triggers\": [ ], \"group_id\": \"\", \"overlappable\": 0.0, \"init_variable\": \"\", \"deck\": 1.0, \"width\": 0.5, \"button_id\": \"REW_DELETE\", \"button_duration\": 0.0, \"y\": 0.66666666666666662965923251249478, \"switch_deck\": \"\", \"height\": 0.33333333333333331482961625624739, \"release_list\": [ ], \"functions\": 1.0, \"stretch\": 0.0 }, { \"color\": 1294375.0, \"persistent\": 0.0, \"text\": \"Load ID on Startup\", \"release_duration\": 0.0, \"queueable\": 0.0, \"command_list\": [ { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 0.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Load Reward ID from Text on LB Startup and save it to a global Variable so that you can use it\", \"v0\": 2.0 }, { \"b1\": \"Reward IDs\", \"b3\": \"rew_id\", \"cmd\": 127.0, \"obsid\": \"Main\", \"pos\": 1.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Reward_IDs\", \"b2\": \"Testreward\" }, { \"b1\": \"=\", \"cmd\": 161.0, \"obsid\": \"Main\", \"pos\": 2.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"rew_ids\", \"b2\": \"rew_id\" } ], \"press_type\": 0.0, \"x\": 0.5, \"border\": 2.0, \"image\": \"\", \"triggers\": [ { \"group_id\": \"\", \"type\": \"Lioranboard Startup\", \"button_id\": \"ID10\", \"trg\": 10.0 } ], \"group_id\": \"\", \"overlappable\": 0.0, \"init_variable\": \"\", \"deck\": 1.0, \"width\": 0.5, \"button_id\": \"ID10\", \"button_duration\": 0.0, \"y\": 0.0, \"switch_deck\": \"\", \"height\": 0.33333333333333331482961625624739, \"release_list\": [ ], \"functions\": 17.0, \"stretch\": false }, { \"color\": 12609072.0, \"persistent\": 0.0, \"text\": \"Update Settings\\nDisable Stuff\", \"release_duration\": 0.0, \"queueable\": 0.0, \"command_list\": [ { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 0.0, \"vis\": 0.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get User ID of Main Account\", \"v0\": 2.0 }, { \"b1\": \"user_id\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 1.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 0.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 2.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"user_id\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 3.0, \"vis\": 0.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Get Auth Token of Main Account\", \"v0\": 2.0 }, { \"b1\": \"auth_token\", \"cmd\": 105.0, \"obsid\": \"Main\", \"pos\": 4.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"\\\/$global.twitch_accounts[0]$\\\/\", \"v0\": 1.0 }, { \"b1\": \"3000\", \"cmd\": 153.0, \"obsid\": \"Main\", \"pos\": 5.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"auth_token\" }, { \"cmd\": 6.0, \"obsid\": \"Main\", \"pos\": 6.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 28.0, \"b0\": \"Update Reward\\nAll Settings can be left empty if you don't wanna use them\", \"v0\": 1.0 }, { \"Color\": \"#FFFFFF\", \"MaxRedeems\": \"\", \"cmd\": 0.0, \"obsid\": \"Main\", \"pos\": 7.0, \"Skip_Queue\": 1.0, \"Auth_Token\": \"auth_token\", \"vis\": 1.0, \"ms\": 0.0, \"Cooldown\": \"\", \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"Reward_ID\": \"global.rew_id\", \"User_ID\": \"user_id\", \"extcmd\": \"Twitch: Edit Reward 2\", \"MaxPerUser\": \"\", \"Input_Text\": 1.0, \"ext\": \"Transmitter\" } ], \"press_type\": 0.0, \"x\": 0.5, \"border\": 2.0, \"image\": \"\", \"triggers\": [ ], \"group_id\": \"\", \"overlappable\": 0.0, \"init_variable\": \"\", \"deck\": 1.0, \"width\": 0.5, \"button_id\": \"ID12\", \"button_duration\": 0.0, \"y\": 0.33333333333333331482961625624739, \"switch_deck\": \"\", \"height\": 0.33333333333333331482961625624739, \"release_list\": [ ], \"functions\": 1.0, \"stretch\": 0.0 }, { \"color\": 0.0, \"persistent\": false, \"text\": \"Created by\\nChrizzz_1508\", \"release_duration\": 0.0, \"queueable\": false, \"command_list\": [ { \"b1\": \"\", \"cmd\": 148.0, \"obsid\": \"Main\", \"pos\": 0.0, \"vis\": 1.0, \"ms\": 0.0, \"sel\": 0.0, \"dis\": 0.0, \"xpan\": 0.0, \"b0\": \"Created by Chrizzz_1508. Feel free to leave me a follow :D https:\\\/\\\/twitch.tv\\\/chrizzz_1508 (based on the Channel Point Extension for LB1 by Lioran, SilverLink and WaldoAndFriends)\" } ], \"press_type\": 0.0, \"x\": 0.5, \"border\": 2.0, \"image\": \"\", \"triggers\": [ ], \"group_id\": \"\", \"overlappable\": false, \"init_variable\": \"\", \"deck\": 1.0, \"width\": 0.5, \"button_id\": \"ID9\", \"button_duration\": 0.0, \"y\": 0.66666666666666662965923251249478, \"switch_deck\": \"\", \"height\": 0.33333333333333331482961625624739, \"release_list\": [ ], \"functions\": 1.0, \"stretch\": false } ], \"deck_name\": \"Channel Point Rewards Examples\", \"grid_x\": 2.0, \"stretch\": 0.0 }", "unique_id": "20220207224801563005577", "deck_verification_code": "81e7f98a1d3a80f21ec8fa744888e6d98f9eae80", "include_image": { } }
